@@ -1,0 +1,27 @@
+---
+# tasks file for lamp
+
+  - name: Install dependencies for WordPress
+    yum: name={{ item }} state=present
+    with_items:
+      - httpd
+      - mariadb-server
+      - mariadb
+      - php
+      - php-mysql
+      - MySQL-python
+
+  - name: http service state
+    service: name=httpd state=started enabled=yes
+
+  - name: Ensure MariaDB is running (and enable it at boot)
+    service: name=mariadb state=started enabled=yes
+
+  - name: Create MariaDB database
+    mysql_db: name=wordpress state=present
+
+  - name: Create Application DB User
+    mysql_user: name=wordpress password=password priv='*.*:ALL,GRANT' host='%' state=present
+
+  - name: http service state
+    service: name=httpd state=restarted
