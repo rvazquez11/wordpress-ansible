@@ -6,17 +6,5 @@ localhost ansible_connection=local
 
 
 
-[server2]
-
-
-
-
-
-
-
-[wordpress:children]
-server1
-server2
-
 
 
