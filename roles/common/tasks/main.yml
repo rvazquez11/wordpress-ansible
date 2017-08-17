@@ -1,1 +1,27 @@
+---
+# tasks file for common
+
+  - name: Install basic features
+    yum: name={{ item }} state=present
+    with_items:
+      - epel-release
+      - nano
+      - wget
+      - libselinux-python
+      - firewalld
+      
+  - name: turns on firewalld
+    service: name=firewalld state=started enabled=no
+
+  - name: turns off firewall
+    service: name=firewalld state=stopped enabled=no
+
+  - name: update CentOS
+    yum: name=* state=latest update_cache=yes
+
+  - name: Selinux
+    become: true
+    selinux:
+      conf: /etc/selinux/config
+      state: disabled
 
