@@ -1,0 +1,112 @@
+---
+- hosts: digitalocean
+
+  vars:
+    do_token: 4ffb23f4a7eeb2aac4480b1b58709f3b4b36bdfccb4b6c2879447a3f5e9b0edd
+
+  strategy: free
+  tasks:
+
+  - name: ensure ssh key exists
+    user: >
+      name={{ ansible_user_id }}
+      generate_ssh_key=yes
+      ssh_key_file=.ssh/id_rsa
+
+  - name: ensure key exists at DigitalOcean
+    digital_ocean: >
+      state=present
+      command=ssh
+      name=my_ssh_key
+      ssh_pub_key={{ lookup('file', '~/.ssh/id_rsa.pub') }}
+      api_token={{ do_token }}
+    register: my_ssh_key
+
+  - name: ensure droplet one exists
+    digital_ocean: >
+      state=present
+      command=droplet
+      name=rvazquez1ct6
+      unique_name=yes
+      size_id=512mb
+      region_id=sgp1
+      image_id=18835303
+      ssh_key_ids="{{ my_ssh_key.ssh_key.id }}"
+      api_token={{ do_token }}
+    register: rvazquez1ct6
+
+  - debug: msg="IP is {{ rvazquez1ct6.droplet.ip_address }}"
+
+  - name: ensure droplet two exists
+    digital_ocean: >
+      state=present
+      command=droplet
+      name=rvazquez2ct6
+      unique_name=yes
+      size_id=512mb
+      region_id=sgp1
+      image_id=18835303
+      ssh_key_ids={{ my_ssh_key.ssh_key.id }}
+      api_token={{ do_token }}
+    register: rvazquez2ct6
+
+  - debug: msg="IP is {{ rvazquez2ct6.droplet.ip_address }}"
+
+- name: adding host playbook
+  hosts: localhost
+  connection: local
+  tasks:
+  - name: add host to ansible host file
+    lineinfile:
+      dest: /root/ansible-do-api/hosts
+      insertafter: [[server1]]
+      line: "{{ rvazquez1ct6.droplet.ip_address }}"
+
+  - name: add host to ansible host file
+    lineinfile:
+      dest: /root/ansible-do-api/hosts
+      insertafter: [[server2]]
+      line: "{{ rvazquez2ct6.droplet.ip_address }}"
+
+- name: Store known hosts of 'all' the hosts in the inventory file
+  hosts: localhost
+  connection: local
+
+  vars:
+    ssh_known_hosts_command: "ssh-keyscan -T 10"
+    ssh_known_hosts_file: "{{ lookup('env','HOME') + '/.ssh/known_hosts' }}"
+    ssh_known_hosts: "{{ groups['all'] }}"
+
+  tasks:
+
+  - name: For each host, scan for its ssh public key
+    shell: "ssh-keyscan {{ item }},`dig +short {{ item }}`"
+    with_items: "{{ ssh_known_hosts }}"
+    register: ssh_known_host_results
+    ignore_errors: yes
+
+  - name: Add/update the public key in the '{{ ssh_known_hosts_file }}'
+    known_hosts:
+      name: "{{ item.item }}"
+      key: "{{ item.stdout }}"
+      path: "{{ ssh_known_hosts_file }}"
+    with_items: "{{ ssh_known_host_results.results }}"
+
+- name: common and lamp packages for both droplets
+  hosts: wordpress
+
+  roles:
+    - common
+    - lamp
+
+- name: deploy wordpress
+  hosts: server1
+
+  roles:
+    - wordpress
+
+- name: deploy wordpress
+  hosts: server2
+
+  roles:
+    - wordpress2
