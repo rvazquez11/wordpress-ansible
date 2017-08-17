@@ -2,12 +2,12 @@
 localhost ansible_connection=local
 
 [server1]
-128.199.227.197
+
 
 
 
 [server2]
-128.199.96.82
+
 
 
 
