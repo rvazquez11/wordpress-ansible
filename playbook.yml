@@ -30,7 +30,7 @@
       unique_name=yes
       size_id=512mb
       region_id=sgp1
-      image_id=18835303
+      image_id=CentOS-7-x64
       ssh_key_ids="{{ my_ssh_key.ssh_key.id }}"
       api_token={{ do_token }}
     register: rvazquez1ct6
